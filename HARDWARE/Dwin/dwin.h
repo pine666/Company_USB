@@ -6,6 +6,7 @@
 #include "rtc.h"
 #include "w25qxx.h"
 #include "string.h"
+#include "ff.h"
 #include "malloc.h"
 #include "delay.h"
 #include "FreeRTOS.h"
@@ -17,7 +18,7 @@
 
 #define MAXCURSE    	10
 #define CMDMAXLEN 		100			//指令最大长度
-
+#define DWIN_BUFFER_LEN 6000
 
 #define ADDR_UA_LINE 0x5030
 #define ADDR_UB_LINE 0x5040
@@ -36,7 +37,7 @@
 #define QUITFLAG (1<<6)
 #define ZoomPageUpFlag (1<<7)
 #define ZoomPageDownFlag (1<<8)
-#define FailPageChangeFlag (1<<9)
+#define FaultPageChangeFlag (1<<9)
 
 typedef enum
 {	
@@ -97,9 +98,10 @@ typedef struct
 //故障事件具体内容
 typedef struct
 {
+	u8 DwinEventNo;					//第几次发生故障
 	s_DwinEventTime s_EventTime;	//故障时间
 	u8 ucFaultType; 				//故障类型
-	u8 DwinEventNo;					//第几次发生故障
+	u8 Dwin_FaultData[8][DWIN_BUFFER_LEN];
 }s_DwinEventList;
 
 
@@ -131,7 +133,7 @@ void Dwin_DrawCurse(u16 datasize,u8 *src,u8 len);
 //void SetCurseData(u8 *src[8],CurseData *cursedata,u8 len);
 void Dwin_DrawLine(u16 addr,DWIN_COLOR color,signed char xs,signed char ys);
 void Dwin_DataSample(u8 *src,u8 *des);
-
+void Dwin_EventDeal(void);
 
 #endif
 

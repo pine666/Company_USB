@@ -47,6 +47,10 @@ unsigned char auchCRCLo[] = {
 0x44, 0x84, 0x85, 0x45, 0x87, 0x47, 0x46, 0x86, 0x82, 0x42, 0x43, 0x83, 0x41, 0x81, 0x80,
 0x40
 };
+/*存储故障数据的路径*/
+u8 const* Fault_PATH={"/FAULTVALUE/1.bin"}
+
+
 u8 ucDwin_Cmd[CMDMAXLEN];		//Diwn屏发送指令，通过Create来构造数组并发送
 u8 ucDwin_RX_Buf[11];			//Dwin屏接收数据长度为11.
 u8 ucPageNo=0;					//当前页码
@@ -57,7 +61,7 @@ u8 ucData[28]={0};					//数据，同样传递给ucDwin_Cmd
 u8 ucFaultRecordingNo=0;		//选中故障事件次序
 s_DwinSettingList s_dwin_settinglist;
 s_DwinCurseData s_CurseData;
-s_DwinEventList s_dwin_event={{0,0,0,0,0,0},0,0};
+s_DwinEventList s_dwin_event;
 /****函数部分*****/
 
 /**********************************************************************
@@ -204,7 +208,7 @@ u8 Dwin_RxDeal(void)
 										break;
 						case 0x501F:	ucFaultRecordingNo=ucRS232_Buf[8];
 										ucPageNo=5;
-										xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag|FailPageChangeFlag);//发生页面切换
+										xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag|FaultPageChangeFlag);//发生页面切换
 										break;				
 						case 0x501B: 	if(Dwin_EventGroupHandler!=NULL)	//打印故障波形							
 											xEventGroupSetBits(Dwin_EventGroupHandler,ToPrintFlag);	
@@ -471,17 +475,37 @@ void Dwin_DrawLine(u16 addr,DWIN_COLOR color,signed char xs,signed char ys)
 **入口参数: 无             
 **出口参数: 无	 
 ***********************************************************************/ 
-BaseType_t Dwin_EventDeal(void)
+void Dwin_DataManager()
+{							    
+	FIL * ffdwin=0;
+	u8 rval=0;
+	u8 *fpath=0;      
+	ffdwin=(FIL*)mymalloc(SRAMIN,sizeof(FIL));	//分配内存	
+	if(ffdwin==NULL)rval=1;
+	fpath=mymalloc(SRAMIN,40);
+	strcpy((char *)fpath,(char *)src);
+	strcat((char *)fpath,(char *));
+	if(tempbuf==NULL)rval=1;
+ 	res=f_open(ffdwin,(const TCHAR*)fxpath,FA_READ); 
+ 	if(res)rval=2;//打开文件失败  
+	
+
+
+}
+void Dwin_EventDeal(void)
 {
 	//查询事件记录界面，故障记录是否已满，满了，则清掉此页显示，重新从第一个显示，若不满，则放在相应位置显示。
 	static int EventCount=0;
 	BaseType_t err;
+	u8 i;
 	if(DEBUG_BinarySemaphore!=NULL)
 	{
 		err=xSemaphoreTake(DEBUG_BinarySemaphore,1000);	//获取信号量,有故障数据接收到，此时判断
 		if(err==pdTRUE)										//获取信号量成功
 		{	
-			s_dwin_event.DwinEventNo=EventCount++;
+			mymemcpy(s_dwin_event.Dwin_FaultData,ucDebug_RX_BUF,DWIN_BUFFER_LEN);
+			s_dwin_event.DwinEventNo=++EventCount;
+			if(EventCount>20)EventCount=0;
 			HAL_RTC_GetTime(&RTC_Handler,&RTC_TimeStruct,RTC_FORMAT_BCD);
 			HAL_RTC_GetDate(&RTC_Handler,&RTC_DateStruct,RTC_FORMAT_BCD);
 			s_dwin_event.s_EventTime.EventTime_Year=RTC_DateStruct.Year;
@@ -491,12 +515,25 @@ BaseType_t Dwin_EventDeal(void)
 			s_dwin_event.s_EventTime.EventTime_Minute=RTC_TimeStruct.Minutes;
 			s_dwin_event.s_EventTime.EventTime_Second=RTC_TimeStruct.Seconds;
 			// s_dwin_event.ucFaultType=
-			//这部分分析故障类型，将其显示在屏幕内			
+			//这部分分析故障类型，将其显示在屏幕内
+			usAddress=0x5020;
+			ucData[0]=0x20;
+			ucData[1]=s_dwin_event.s_EventTime.EventTime_Year;
+			ucData[2]=s_dwin_event.s_EventTime.EventTime_Month;
+			ucData[3]=s_dwin_event.s_EventTime.EventTime_Day;
+			ucData[4]=s_dwin_event.s_EventTime.EventTime_Hour;
+			ucData[5]=s_dwin_event.s_EventTime.EventTime_Minute;
+			ucData[6]=s_dwin_event.s_EventTime.EventTime_Second;
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
+			RS232_Send_Data(ucDwin_Cmd,8+7);
+			vTaskDelay(40);
+			usAddress=0x5050;
+			ucData[0]=EventCount;
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,1);
+			RS232_Send_Data(ucDwin_Cmd,8+1);
+			vTaskDelay(40);		
 		}
 	}
-
-
-	return 0;
 }
 
 

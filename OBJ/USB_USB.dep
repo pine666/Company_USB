@@ -1,6 +1,6 @@
 Dependencies for Project 'USB', Target 'USB': (DO NOT MODIFY !)
 CompilerVersion: 5060750::V5.06 update 6 (build 750)::ARMCC
-F (.\main.c)(0x5FD6C6FE)(--c99 -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ..\CORE -I ..\USER -I ..\SYSTEM\delay -I ..\SYSTEM\usart -I ..\HALLIB\STM32H7xx_HAL_Driver\Inc -I ..\MALLOC -I ..\HARDWARE\LED -I ..\HARDWARE\SDRAM -I ..\HARDWARE\24CXX -I ..\HARDWARE\IIC -I ..\HARDWARE\PCF8574 -I ..\HARDWARE\QSPI -I ..\HARDWARE\W25QXX -I ..\HARDWARE\SPI -I ..\HARDWARE\MPU -I ..\HARDWARE\USB_NOTE -I ..\HARDWARE\RTC -I ..\FATFS\exfuns -I ..\FATFS\source -I ..\USB\USB_APP -I ..\USB\STM32_USB_Host_Library\Class\MSC\Inc -I ..\USB\STM32_USB_Host_Library\Core\Inc -I ..\HARDWARE\Dwin -I ..\HARDWARE\RS232 -I ..\SYSTEM\sys -I ..\FreeRTOS\include -I ..\FreeRTOS\portable\RVDS\ARM_CM7\r0p1 -I ..\HARDWARE\TIMER -I ..\HARDWARE\RNG -I ..\HARDWARE\RS485-I.\RTE\_USB-IC:\Keil_v5\ARM\PACK\Keil\STM32H7xx_DFP\2.2.0\Drivers\CMSIS\Device\ST\STM32H7xx\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="530" -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_USB_FS-o ..\obj\main.o --depend ..\obj\main.d)
+F (.\main.c)(0x5FD70891)(--c99 -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ..\CORE -I ..\USER -I ..\SYSTEM\delay -I ..\SYSTEM\usart -I ..\HALLIB\STM32H7xx_HAL_Driver\Inc -I ..\MALLOC -I ..\HARDWARE\LED -I ..\HARDWARE\SDRAM -I ..\HARDWARE\24CXX -I ..\HARDWARE\IIC -I ..\HARDWARE\PCF8574 -I ..\HARDWARE\QSPI -I ..\HARDWARE\W25QXX -I ..\HARDWARE\SPI -I ..\HARDWARE\MPU -I ..\HARDWARE\USB_NOTE -I ..\HARDWARE\RTC -I ..\FATFS\exfuns -I ..\FATFS\source -I ..\USB\USB_APP -I ..\USB\STM32_USB_Host_Library\Class\MSC\Inc -I ..\USB\STM32_USB_Host_Library\Core\Inc -I ..\HARDWARE\Dwin -I ..\HARDWARE\RS232 -I ..\SYSTEM\sys -I ..\FreeRTOS\include -I ..\FreeRTOS\portable\RVDS\ARM_CM7\r0p1 -I ..\HARDWARE\TIMER -I ..\HARDWARE\RNG -I ..\HARDWARE\RS485-I.\RTE\_USB-IC:\Keil_v5\ARM\PACK\Keil\STM32H7xx_DFP\2.2.0\Drivers\CMSIS\Device\ST\STM32H7xx\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="530" -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_USB_FS-o ..\obj\main.o --depend ..\obj\main.d)
 I (..\SYSTEM\sys\sys.h)(0x5FC84826)
 I (..\USER\stm32h7xx.h)(0x5A4CE934)
 I (..\USER\stm32h743xx.h)(0x5A4CE934)
@@ -78,7 +78,7 @@ I (..\HARDWARE\RS232\rs232.h)(0x5FCD7F84)
 I (..\HARDWARE\RS485\rs485.h)(0x5FCD8C19)
 I (..\HARDWARE\PCF8574\pcf8574.h)(0x5784AD2E)
 I (..\HARDWARE\IIC\myiic.h)(0x58007C40)
-I (..\HARDWARE\Dwin\dwin.h)(0x5FD6CE31)
+I (..\HARDWARE\Dwin\dwin.h)(0x5FD706F6)
 I (..\HARDWARE\RTC\rtc.h)(0x5FCEDE36)
 I (..\HARDWARE\W25QXX\w25qxx.h)(0x579076F9)
 I (..\MALLOC\malloc.h)(0x5FD18074)
@@ -2658,8 +2658,8 @@ I (..\HALLIB\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_hcd.h)(0x5A4CE93E)
 I (..\HALLIB\STM32H7xx_HAL_Driver\Inc\stm32h7xx_ll_usb.h)(0x5A4CE93D)
 I (..\SYSTEM\delay\delay.h)(0x5FC84900)
 I (..\HARDWARE\LED\led.h)(0x5938CA48)
-F (..\HARDWARE\Dwin\dwin.c)(0x5FD6C87C)(--c99 -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ..\CORE -I ..\USER -I ..\SYSTEM\delay -I ..\SYSTEM\usart -I ..\HALLIB\STM32H7xx_HAL_Driver\Inc -I ..\MALLOC -I ..\HARDWARE\LED -I ..\HARDWARE\SDRAM -I ..\HARDWARE\24CXX -I ..\HARDWARE\IIC -I ..\HARDWARE\PCF8574 -I ..\HARDWARE\QSPI -I ..\HARDWARE\W25QXX -I ..\HARDWARE\SPI -I ..\HARDWARE\MPU -I ..\HARDWARE\USB_NOTE -I ..\HARDWARE\RTC -I ..\FATFS\exfuns -I ..\FATFS\source -I ..\USB\USB_APP -I ..\USB\STM32_USB_Host_Library\Class\MSC\Inc -I ..\USB\STM32_USB_Host_Library\Core\Inc -I ..\HARDWARE\Dwin -I ..\HARDWARE\RS232 -I ..\SYSTEM\sys -I ..\FreeRTOS\include -I ..\FreeRTOS\portable\RVDS\ARM_CM7\r0p1 -I ..\HARDWARE\TIMER -I ..\HARDWARE\RNG -I ..\HARDWARE\RS485-I.\RTE\_USB-IC:\Keil_v5\ARM\PACK\Keil\STM32H7xx_DFP\2.2.0\Drivers\CMSIS\Device\ST\STM32H7xx\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="530" -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_USB_FS-o ..\obj\dwin.o --depend ..\obj\dwin.d)
-I (..\HARDWARE\Dwin\dwin.h)(0x5FD6CE31)
+F (..\HARDWARE\Dwin\dwin.c)(0x5FD70D19)(--c99 -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ..\CORE -I ..\USER -I ..\SYSTEM\delay -I ..\SYSTEM\usart -I ..\HALLIB\STM32H7xx_HAL_Driver\Inc -I ..\MALLOC -I ..\HARDWARE\LED -I ..\HARDWARE\SDRAM -I ..\HARDWARE\24CXX -I ..\HARDWARE\IIC -I ..\HARDWARE\PCF8574 -I ..\HARDWARE\QSPI -I ..\HARDWARE\W25QXX -I ..\HARDWARE\SPI -I ..\HARDWARE\MPU -I ..\HARDWARE\USB_NOTE -I ..\HARDWARE\RTC -I ..\FATFS\exfuns -I ..\FATFS\source -I ..\USB\USB_APP -I ..\USB\STM32_USB_Host_Library\Class\MSC\Inc -I ..\USB\STM32_USB_Host_Library\Core\Inc -I ..\HARDWARE\Dwin -I ..\HARDWARE\RS232 -I ..\SYSTEM\sys -I ..\FreeRTOS\include -I ..\FreeRTOS\portable\RVDS\ARM_CM7\r0p1 -I ..\HARDWARE\TIMER -I ..\HARDWARE\RNG -I ..\HARDWARE\RS485-I.\RTE\_USB-IC:\Keil_v5\ARM\PACK\Keil\STM32H7xx_DFP\2.2.0\Drivers\CMSIS\Device\ST\STM32H7xx\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="530" -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_USB_FS-o ..\obj\dwin.o --depend ..\obj\dwin.d)
+I (..\HARDWARE\Dwin\dwin.h)(0x5FD706F6)
 I (..\SYSTEM\sys\sys.h)(0x5FC84826)
 I (..\USER\stm32h7xx.h)(0x5A4CE934)
 I (..\USER\stm32h743xx.h)(0x5A4CE934)
@@ -3869,7 +3869,7 @@ I (..\FreeRTOS\include\task.h)(0x573F3A16)
 I (..\FreeRTOS\include\list.h)(0x573F3A16)
 I (..\MALLOC\malloc.h)(0x5FD18074)
 I (..\HARDWARE\RS232\rs232.h)(0x5FCD7F84)
-I (..\HARDWARE\Dwin\dwin.h)(0x5FD6CE31)
+I (..\HARDWARE\Dwin\dwin.h)(0x5FD706F6)
 I (..\HARDWARE\RTC\rtc.h)(0x5FCEDE36)
 I (..\HARDWARE\W25QXX\w25qxx.h)(0x579076F9)
 I (..\SYSTEM\delay\delay.h)(0x5FC84900)
