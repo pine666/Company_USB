@@ -332,16 +332,17 @@ void pagedataProcess_task(void *pvParameters)
 		//事件记录页，点进去会跳转到Page5
 		else if(ucPageNo==3)
 		{
-
+			Dwin_EventDeal();
 
 		}
 		else if(ucPageNo==5)
 		{
-			
-			if((EventValue&FailPageChangeFlag)||(EventValue&QUITFLAG))
+			Dwin_EventDeal();
+			vTaskDelay(40);	
+			if((EventValue&FaultPageChangeFlag)||(EventValue&QUITFLAG))
 			{
 				k=0;
-//					usart1cnt=ucDebug_RX_CNT;					
+//				usart1cnt=ucDebug_RX_CNT;					
 				ucDebug_RX_CNT=0;//串口接收缓冲区清零
 				Usart1Buf=mymalloc(SRAMEX,800*sizeof(u8));
 				if(Usart1Buf!=NULL)
@@ -354,7 +355,7 @@ void pagedataProcess_task(void *pvParameters)
 						else k=k+8;
 					}
 					Dwin_DrawCurse(800,Usart1Buf,10);
-					xEventGroupClearBits(Dwin_EventGroupHandler,QUITFLAG|FailPageChangeFlag);	
+					xEventGroupClearBits(Dwin_EventGroupHandler,QUITFLAG|FaultPageChangeFlag);	
 					MYFREE(SRAMEX,Usart1Buf);
 				}
 			}
