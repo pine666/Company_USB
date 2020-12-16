@@ -81,12 +81,12 @@
 ..\obj\main.o: ..\HARDWARE\Dwin\dwin.h
 ..\obj\main.o: ..\HARDWARE\RTC\rtc.h
 ..\obj\main.o: ..\HARDWARE\W25QXX\w25qxx.h
-..\obj\main.o: ..\MALLOC\malloc.h
-..\obj\main.o: ..\HARDWARE\SDRAM\sdram.h
-..\obj\main.o: ..\HARDWARE\MPU\mpu.h
 ..\obj\main.o: ..\FATFS\source\ff.h
 ..\obj\main.o: ..\FATFS\source\integer.h
 ..\obj\main.o: ..\FATFS\source\ffconf.h
+..\obj\main.o: ..\MALLOC\malloc.h
+..\obj\main.o: ..\HARDWARE\SDRAM\sdram.h
+..\obj\main.o: ..\HARDWARE\MPU\mpu.h
 ..\obj\main.o: ..\FATFS\exfuns\exfuns.h
 ..\obj\main.o: ..\USB\STM32_USB_Host_Library\Core\Inc\usbh_core.h
 ..\obj\main.o: ..\USB\USB_APP\usbh_conf.h

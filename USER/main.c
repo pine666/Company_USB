@@ -189,7 +189,7 @@ int main(void)
 	RNG_Init();								//RNG,随机生成器初始化
     W25QXX_Init();				   		 	//初始化W25Q256
  	my_mem_init(SRAMIN);		    		//初始化内部内存池
-	my_mem_init(SRAMEX);		    		//初始化外部内存池
+	// my_mem_init(SRAMEX);		    		//初始化外部内存池
 	my_mem_init(SRAMDTCM);		    		//初始化CCM内存池 
 	exfuns_init();				            //为fatfs相关变量申请内存  
  	f_mount(fs[1],"1:",1); 		            //挂载SPI FLASH. 
@@ -256,8 +256,10 @@ void changepage_task(void *pvParameters)
 {
 	BaseType_t err=pdFALSE;
 	EventBits_t EventValue;	
+	u8 i,j;
 	while(1)
-	{		
+	{	
+
 		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志				
 		if(EventValue&ChangePageFlag)
 		{ 					
@@ -275,17 +277,32 @@ void changepage_task(void *pvParameters)
 				ClearCurse();
 				xEventGroupClearBits(Dwin_EventGroupHandler,ClearScreenFlag);					
 			}
+			if(EventValue&EventPageClearFlag)
+			{
+				//先把屏幕的时间和文本清为初始值
+				usAddress=0x5020;
+				for(i=0;i<10;i++)
+				{		
+					for(j=0;j<7;j++)
+						ucData[j]=0x00;					
+					Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
+					RS232_Send_Data(ucDwin_Cmd,8+7);	
+					usAddress=usAddress+4;
+				}
+			}
 		}
 		if(RS232_BinarySemaphore!=NULL)
 		{
 
-			err=xSemaphoreTake(RS232_BinarySemaphore,1000);	//获取信号量
+			err=xSemaphoreTake(RS232_BinarySemaphore,0);	//获取信号量
 			if(err==pdTRUE)										//获取信号量成功
 			{			
 				Dwin_RxDeal();
 				ucDwin_RX_Cnt=0;//串口接收缓冲区清零	
 			}						
-		}	
+		}
+		Dwin_DataManager();	
+		vTaskDelay(200);		
 	}
 }
 
@@ -293,7 +310,7 @@ void changepage_task(void *pvParameters)
 void pagedataProcess_task(void *pvParameters)
 {
 	u8 flag=1,random;
-	u16 i,k,inc;
+	u16 i,j,k,inc;
 	// u8 size;
 	u8 *BigBuf;
 	u8 *Usart1Buf;
@@ -303,6 +320,7 @@ void pagedataProcess_task(void *pvParameters)
 	// u16 usart1cnt;
 	while (1)
     {
+		
 		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志
 		//欢迎界面
 		if(ucPageNo==0)			//若进入页面数据加载时，页面还是为0（欢迎界面），则换页为1
@@ -332,19 +350,17 @@ void pagedataProcess_task(void *pvParameters)
 		//事件记录页，点进去会跳转到Page5
 		else if(ucPageNo==3)
 		{
-			Dwin_EventDeal();
 
+			Dwin_FultEventDisplay();
 		}
 		else if(ucPageNo==5)
 		{
-			Dwin_EventDeal();
-			vTaskDelay(40);	
 			if((EventValue&FaultPageChangeFlag)||(EventValue&QUITFLAG))
 			{
 				k=0;
 //				usart1cnt=ucDebug_RX_CNT;					
 				ucDebug_RX_CNT=0;//串口接收缓冲区清零
-				Usart1Buf=mymalloc(SRAMEX,800*sizeof(u8));
+				Usart1Buf=mymalloc(SRAMIN,800*sizeof(u8));
 				if(Usart1Buf!=NULL)
 				{
 //						mymemcpy(Usart1Buf,ucDebug_RX_BUF,usart1cnt);
@@ -356,12 +372,12 @@ void pagedataProcess_task(void *pvParameters)
 					}
 					Dwin_DrawCurse(800,Usart1Buf,10);
 					xEventGroupClearBits(Dwin_EventGroupHandler,QUITFLAG|FaultPageChangeFlag);	
-					MYFREE(SRAMEX,Usart1Buf);
+					MYFREE(SRAMIN,Usart1Buf);
 				}
 			}
 			if(EventValue&ToDownloadFlag)
 			{
-				NotepadBuf=mymalloc(SRAMEX,6000*sizeof(u8));
+				NotepadBuf=mymalloc(SRAMIN,6000*sizeof(u8));
 				if(NotepadBuf!=NULL)
 				{
 					mymemset(NotepadBuf,0x64,6000);
@@ -379,33 +395,9 @@ void pagedataProcess_task(void *pvParameters)
 			}
 
 		}
-// 		else if(ucPageNo==4)
-// 		{
-// 			usAddress=0x5100;
-// //			for(j=0;j<3;j++)
-// //			{
-// //				for(i=0;i<8;i++)
-// //					data[i]=cnstr[j][i];
-// //				Dwin_CmdCreate(address,data,DWIN_WRITE,8);
-// //				RS232_Send_Data(Dwin_Cmd,8+8);
-// //				vTaskDelay(400);
-// //			}
-// 			HAL_RTC_GetTime(&RTC_Handler,&RTC_TimeStruct,RTC_FORMAT_BCD);
-// 			HAL_RTC_GetDate(&RTC_Handler,&RTC_DateStruct,RTC_FORMAT_BCD);
-// 			ucData[0]=0x20;
-// 			ucData[1]=RTC_DateStruct.Year;
-// 			ucData[2]=RTC_DateStruct.Month;
-// 			ucData[3]=RTC_DateStruct.Date;
-// 			ucData[4]=RTC_TimeStruct.Hours;
-// 			ucData[5]=RTC_TimeStruct.Minutes;
-// 			ucData[6]=RTC_TimeStruct.Seconds;
-// 			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
-// 			RS232_Send_Data(ucDwin_Cmd,8+7);
-// 			vTaskDelay(1000);		
-// 		}
 		else if(ucPageNo==6)
 		{
-			BigBuf=mymalloc(SRAMEX,1200*sizeof(u8));
+			BigBuf=mymalloc(SRAMIN,1200*sizeof(u8));
 			if(BigBuf!=NULL)
 			{
 				k=0;
@@ -429,7 +421,7 @@ void pagedataProcess_task(void *pvParameters)
 					ucZoomInNo=0;
 				}
 			}
-			MYFREE(SRAMEX,BigBuf);				
+			MYFREE(SRAMIN,BigBuf);				
 		}		
     }
 }

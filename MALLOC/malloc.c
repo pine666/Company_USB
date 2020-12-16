@@ -1,38 +1,27 @@
 #include "malloc.h"
 //////////////////////////////////////////////////////////////////////////////////	 
-//本程序只供学习使用，未经作者许可，不得用于其它任何用途
-//ALIENTEK STM32H7开发板
-//内存管理 驱动代码	   
-//正点原子@ALIENTEK
-//技术论坛:www.openedv.com
-//创建日期:2017/8/15
-//版本：V1.0
-//版权所有，盗版必究。
-//Copyright(C) 广州市星翼电子科技有限公司 2014-2024
-//All rights reserved									  
-////////////////////////////////////////////////////////////////////////////////// 	 
+
+
 
 //内存池(32字节对齐)
 __align(64) u8 mem1base[MEM1_MAX_SIZE];													//内部SRAM内存池
-__align(64) u8 mem2base[MEM2_MAX_SIZE] __attribute__((at(0XC01F4000)));					//外部SDRAM内存池,前面2M给LTDC用了(1280*800*2)
-__align(64) u8 mem3base[MEM3_MAX_SIZE] __attribute__((at(0X20000000)));					//内部DTCM内存池
+__align(64) u8 mem2base[MEM2_MAX_SIZE] __attribute__((at(0X20000000)));					//内部DTCM内存池
 //内存管理表
 u32 mem1mapbase[MEM1_ALLOC_TABLE_SIZE];													//内部SRAM内存池MAP
-u32 mem2mapbase[MEM2_ALLOC_TABLE_SIZE] __attribute__((at(0XC01F4000+MEM2_MAX_SIZE)));	//外部SRAM内存池MAP
-u32 mem3mapbase[MEM3_ALLOC_TABLE_SIZE] __attribute__((at(0X20000000+MEM3_MAX_SIZE)));	//内部DTCM内存池MAP
+u32 mem2mapbase[MEM2_ALLOC_TABLE_SIZE] __attribute__((at(0X20000000+MEM2_MAX_SIZE)));	//内部DTCM内存池MAP
 //内存管理参数	   
-const u32 memtblsize[SRAMBANK]={MEM1_ALLOC_TABLE_SIZE,MEM2_ALLOC_TABLE_SIZE,MEM3_ALLOC_TABLE_SIZE};	//内存表大小
-const u32 memblksize[SRAMBANK]={MEM1_BLOCK_SIZE,MEM2_BLOCK_SIZE,MEM3_BLOCK_SIZE};					//内存分块大小
-const u32 memsize[SRAMBANK]={MEM1_MAX_SIZE,MEM2_MAX_SIZE,MEM3_MAX_SIZE};							//内存总大小
+const u32 memtblsize[SRAMBANK]={MEM1_ALLOC_TABLE_SIZE,MEM2_ALLOC_TABLE_SIZE};	//内存表大小
+const u32 memblksize[SRAMBANK]={MEM1_BLOCK_SIZE,MEM2_BLOCK_SIZE};					//内存分块大小
+const u32 memsize[SRAMBANK]={MEM1_MAX_SIZE,MEM2_MAX_SIZE};							//内存总大小
 
 //内存管理控制器
 struct _m_mallco_dev mallco_dev=
 {
 	my_mem_init,						//内存初始化
 	my_mem_perused,						//内存使用率
-	mem1base,mem2base,mem3base,			//内存池
-	mem1mapbase,mem2mapbase,mem3mapbase,//内存管理状态表
-	0,0,0,  		 					//内存管理未就绪
+	mem1base,mem2base,			//内存池
+	mem1mapbase,mem2mapbase,//内存管理状态表
+	0,0,  		 					//内存管理未就绪
 };
 
 //复制内存

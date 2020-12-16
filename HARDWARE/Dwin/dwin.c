@@ -48,7 +48,7 @@ unsigned char auchCRCLo[] = {
 0x40
 };
 /*存储故障数据的路径*/
-u8 const* Fault_PATH={"/FAULTVALUE/1.bin"}
+
 
 
 u8 ucDwin_Cmd[CMDMAXLEN];		//Diwn屏发送指令，通过Create来构造数组并发送
@@ -58,7 +58,12 @@ u8 ucZoomInNo=0;					//放大区域
 u8 ucZoomChange=0;				//放大区域换页
 u16 usAddress=0;					//地址，传递给ucDwin_Cmd
 u8 ucData[28]={0};					//数据，同样传递给ucDwin_Cmd
+u8 ucEventCount=0;				//事件计数
+
 u8 ucFaultRecordingNo=0;		//选中故障事件次序
+u8 *Dwin_FaultData[8];           //这里需要动态数组去转存，如果用内部ROM会爆
+u16 usFaultFlashOffset;
+
 s_DwinSettingList s_dwin_settinglist;
 s_DwinCurseData s_CurseData;
 s_DwinEventList s_dwin_event;
@@ -157,7 +162,12 @@ u8 Dwin_RxDeal(void)
 						/*页面切换*/
 						case 0x5000: 	ucPageNo=ucRS232_Buf[8];		//0x5000为页面切换
 										if(Dwin_EventGroupHandler!=NULL)
-											xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag|ClearScreenFlag);//发生页面切换
+										{
+											if(ucPageNo==3)
+												xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag|ClearScreenFlag|EventPageClearFlag);//发生页面切换且需要刷新页面
+											else
+												xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag|ClearScreenFlag);//发生页面切换
+										}
 										break;
 						/*设置页按键返回*/
 						case 0x500B: 	s_dwin_settinglist.ucCTratio=ucRS232_Buf[8];		//CT变比
@@ -469,45 +479,126 @@ void Dwin_DrawLine(u16 addr,DWIN_COLOR color,signed char xs,signed char ys)
 	Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,14);
 	RS232_Send_Data(ucDwin_Cmd,8+14); 
 }
+
 /**********************************************************************
-**函数名称: Dwin_EventPageShow
+**函数名称: Dwin_FlashDataSave
+**函数功能: 用于数据在flash中的存储，使用FATFS文件管理系统，存储格式为.bin文件
+**入口参数: 无             
+**出口参数: 无	 
+***********************************************************************/ 
+u8 Dwin_FlashDataSave(u8 *buf,u8 No,u32 offset)
+{							    
+	FIL *ffdwin=0;
+	u8 rval=0;
+	u8 *fpath=0; 
+	u8 res;
+	u16 br;    
+
+	ffdwin=(FIL*)mymalloc(SRAMIN,sizeof(FIL));	//分配内存	
+	fpath=mymalloc(SRAMIN,100);
+	if(ffdwin==NULL||fpath==NULL)rval=1;
+	else
+	{ 
+		sprintf((char *)fpath,"1:FAULTVALUE/NO.%02d.bin",No);
+ 		res=f_open(ffdwin,(const TCHAR*)fpath,FA_READ| FA_WRITE| FA_CREATE_NEW); 
+ 		if(res)rval=2;//打开文件失败  
+		else 
+		{
+			f_lseek(ffdwin,offset);
+			f_write(ffdwin,buf,DWIN_BUFFER_LEN,(UINT*)&br);
+			while(br<DWIN_BUFFER_LEN);
+			f_close(ffdwin);
+		}
+	}
+	MYFREE(SRAMIN,ffdwin);
+	MYFREE(SRAMIN,fpath);
+
+	return rval;
+}
+/**********************************************************************
+**函数名称: Dwin_FlashDataRead
 **函数功能: 用于事件界面，每个事件时间和故障类型等信息的显示，并配有换页功能
 **入口参数: 无             
 **出口参数: 无	 
 ***********************************************************************/ 
-void Dwin_DataManager()
+u8 Dwin_FlashDataRead(u8 *buf,u8 No)
 {							    
-	FIL * ffdwin=0;
+	FIL *ffdwin=0;
 	u8 rval=0;
-	u8 *fpath=0;      
+	u8 *fpath=0; 
+	u8 res;
+	u16 br;   	
 	ffdwin=(FIL*)mymalloc(SRAMIN,sizeof(FIL));	//分配内存	
-	if(ffdwin==NULL)rval=1;
-	fpath=mymalloc(SRAMIN,40);
-	strcpy((char *)fpath,(char *)src);
-	strcat((char *)fpath,(char *));
-	if(tempbuf==NULL)rval=1;
- 	res=f_open(ffdwin,(const TCHAR*)fxpath,FA_READ); 
- 	if(res)rval=2;//打开文件失败  
-	
+	fpath=mymalloc(SRAMIN,100);
+	if(ffdwin==NULL||fpath==NULL)rval=1;
+	else
+	{
+		sprintf((char *)fpath,"1:FAULTVALUE/NO.%02d.bin",No);
+		res=f_open(ffdwin,(const TCHAR*)fpath,FA_READ); 
+		if(res)rval=2;//打开文件失败  
+		else 
+		{
+			f_read(ffdwin,buf,DWIN_BUFFER_LEN,(UINT*)&br);
+			while(br<DWIN_BUFFER_LEN);
+			f_close(ffdwin);
+		}
+	}
+	MYFREE(SRAMIN,ffdwin);
+	MYFREE(SRAMIN,fpath);
+
+	return rval;
+}
+/**********************************************************************
+**函数名称: Dwin_FlashDataErase
+**函数功能: 当文件以及接近60个（超过50），在确保文件以及存储在U盘的情况下删除前40个数据，
+		   并且把页码更新
+**入口参数: 无             
+**出口参数: 无	 
+***********************************************************************/ 
+void Dwin_FlashDataErase()
+{
+
 
 
 }
-void Dwin_EventDeal(void)
+/**********************************************************************
+**函数名称: Dwin_DataManager
+**函数功能: 数据管理，用于数据的串口接收后的复制，写入flash
+**入口参数: 无             
+**出口参数: 无	 
+***********************************************************************/ 
+void Dwin_DataManager(void)
 {
-	//查询事件记录界面，故障记录是否已满，满了，则清掉此页显示，重新从第一个显示，若不满，则放在相应位置显示。
-	static int EventCount=0;
+	u32 offset=0;
+	u8 flasherr;
 	BaseType_t err;
-	u8 i;
+	u8 i;	
 	if(DEBUG_BinarySemaphore!=NULL)
-	{
-		err=xSemaphoreTake(DEBUG_BinarySemaphore,1000);	//获取信号量,有故障数据接收到，此时判断
+	{		
+		err=xSemaphoreTake(DEBUG_BinarySemaphore,0);	//获取信号量,有故障数据接收到，此时判断
 		if(err==pdTRUE)										//获取信号量成功
 		{	
-			mymemcpy(s_dwin_event.Dwin_FaultData,ucDebug_RX_BUF,DWIN_BUFFER_LEN);
-			s_dwin_event.DwinEventNo=++EventCount;
-			if(EventCount>20)EventCount=0;
+			for(i=0; i<8;i++)
+				Dwin_FaultData[i]=mymalloc(SRAMIN,DWIN_BUFFER_LEN);
 			HAL_RTC_GetTime(&RTC_Handler,&RTC_TimeStruct,RTC_FORMAT_BCD);
 			HAL_RTC_GetDate(&RTC_Handler,&RTC_DateStruct,RTC_FORMAT_BCD);
+			s_dwin_event.DwinEventNo=++ucEventCount;
+			if(ucEventCount>59)ucEventCount=0;
+			//判断一下是什么数据，电压、电流、还是零序，这里先直接赋值了
+			for(i=0;i<8;i++)
+			{
+				mymemcpy(Dwin_FaultData[i],ucDebug_RX_BUF,DWIN_BUFFER_LEN);		
+				flasherr=Dwin_FlashDataSave(Dwin_FaultData[i],ucEventCount,offset);
+				if(flasherr!=0)
+				{	
+					//这里给个写入失败标志	
+//					printf("flash write err,err:%d\n",flasherr);
+					break;
+				}
+				offset+=i*DWIN_BUFFER_LEN;
+			}		
+			//查询事件记录界面，故障记录是否已满，满了，则清掉此页显示，重新从第一个显示，若不满，则放在相应位置显示。
+			//时钟信息
 			s_dwin_event.s_EventTime.EventTime_Year=RTC_DateStruct.Year;
 			s_dwin_event.s_EventTime.EventTime_Month=RTC_DateStruct.Month;
 			s_dwin_event.s_EventTime.EventTime_Day=RTC_DateStruct.Date;
@@ -516,24 +607,82 @@ void Dwin_EventDeal(void)
 			s_dwin_event.s_EventTime.EventTime_Second=RTC_TimeStruct.Seconds;
 			// s_dwin_event.ucFaultType=
 			//这部分分析故障类型，将其显示在屏幕内
-			usAddress=0x5020;
-			ucData[0]=0x20;
-			ucData[1]=s_dwin_event.s_EventTime.EventTime_Year;
-			ucData[2]=s_dwin_event.s_EventTime.EventTime_Month;
-			ucData[3]=s_dwin_event.s_EventTime.EventTime_Day;
-			ucData[4]=s_dwin_event.s_EventTime.EventTime_Hour;
-			ucData[5]=s_dwin_event.s_EventTime.EventTime_Minute;
-			ucData[6]=s_dwin_event.s_EventTime.EventTime_Second;
-			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
-			RS232_Send_Data(ucDwin_Cmd,8+7);
-			vTaskDelay(40);
-			usAddress=0x5050;
-			ucData[0]=EventCount;
-			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,1);
-			RS232_Send_Data(ucDwin_Cmd,8+1);
-			vTaskDelay(40);		
+			//将结构体内容存在spi-falsh中
+			usFaultFlashOffset=(ucEventCount-1)*4096;
+			W25QXX_Write((u8 *)&s_dwin_event,DWININFOADDR+usFaultFlashOffset,sizeof(s_DwinEventList));
+			for(i=0; i<8;i++)
+				MYFREE(SRAMIN,Dwin_FaultData[i]);
 		}
 	}
+}
+/**********************************************************************
+**函数名称: Dwin_EventDeal
+**函数功能: 用于事件处理，包括事件、事件类型、以及故障数据的处理 
+**入口参数: 暂无             
+**出口参数: 暂无	 
+***********************************************************************/
+void Dwin_FultEventDisplay(void)
+{
+	u8 Eventpage=ucEventCount/10;
+	u8 Eventno=ucEventCount%10;
+	if((Eventpage>0)&&(Eventno==0))
+		Eventno=10;
+	u8 i;
+	s_DwinEventList dwineventlist[10];
+
+	for(i=0;i<Eventno;i++)
+	{
+		usFaultFlashOffset=i*4096;
+		W25QXX_Read((u8 *)&dwineventlist[i],DWININFOADDR+usFaultFlashOffset,sizeof(s_DwinEventList));
+	}
+
+		//以上将结构体的参数全部幅值完毕，下面将在屏幕显示内容
+	for(i=Eventno;i>0;i--)
+	{
+		switch(i)
+		{
+			case 1: usAddress=0x5020;break;
+			case 2: usAddress=0x5024;break;
+			case 3: usAddress=0x5028;break;
+			case 4: usAddress=0x502C;break;
+			case 5: usAddress=0x5030;break;
+			case 6: usAddress=0x5034;break;
+			case 7: usAddress=0x5038;break;
+			case 8: usAddress=0x503C;break;
+			case 9: usAddress=0x5040;break;
+			case 10: usAddress=0x5044;break;
+			default: break;
+		}
+		ucData[0]=0x20;
+		ucData[1]=dwineventlist[Eventpage*10+i-1].s_EventTime.EventTime_Year;
+		ucData[2]=dwineventlist[Eventpage*10+i-1].s_EventTime.EventTime_Month;
+		ucData[3]=dwineventlist[Eventpage*10+i-1].s_EventTime.EventTime_Day;
+		ucData[4]=dwineventlist[Eventpage*10+i-1].s_EventTime.EventTime_Hour;
+		ucData[5]=dwineventlist[Eventpage*10+i-1].s_EventTime.EventTime_Minute;
+		ucData[6]=dwineventlist[Eventpage*10+i-1].s_EventTime.EventTime_Second;
+		Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
+		RS232_Send_Data(ucDwin_Cmd,8+7);
+		vTaskDelay(40);
+
+		// switch(i)
+		// {
+		// 	case 1: usAddress=0x5050;break;
+		// 	case 2: usAddress=0x5070;break;
+		// 	case 3: usAddress=0x5090;break;
+		// 	case 4: usAddress=0x50B0;break;
+		// 	case 5: usAddress=0x50D0;break;
+		// 	case 6: usAddress=0x50F0;break;
+		// 	case 7: usAddress=0x5110;break;
+		// 	case 8: usAddress=0x5130;break;
+		// 	case 9: usAddress=0x5150;break;
+		// 	case 10: usAddress=0x5170;break;
+		// 	default: break;
+		// }
+		// ucData[0]=dwineventlist[i-1].DwinEventNo;
+		// Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,1);
+		// RS232_Send_Data(ucDwin_Cmd,8+1);
+		// vTaskDelay(40);	
+	}	
 }
 
 

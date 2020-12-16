@@ -76,6 +76,9 @@
 ..\obj\timer.o: ..\HARDWARE\Dwin\dwin.h
 ..\obj\timer.o: ..\HARDWARE\RTC\rtc.h
 ..\obj\timer.o: ..\HARDWARE\W25QXX\w25qxx.h
+..\obj\timer.o: ..\FATFS\source\ff.h
+..\obj\timer.o: ..\FATFS\source\integer.h
+..\obj\timer.o: ..\FATFS\source\ffconf.h
 ..\obj\timer.o: ..\SYSTEM\delay\delay.h
 ..\obj\timer.o: ..\FreeRTOS\include\event_groups.h
 ..\obj\timer.o: ..\FreeRTOS\include\timers.h

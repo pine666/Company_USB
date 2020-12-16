@@ -15,6 +15,10 @@
 //用于Dwin屏的数据分析，crc校验操作
 
 #define Dwin_memcpy memcpy
+#define DWININFOADDR 	31756*1024  			//spiflash有25M用于FAFTS的内存管理，
+												//虽然这部分可以直接使用，但是其需要一个文件类型
+												//而故障事件的基本信息只是结构体，数据小，并不需要文件管理
+												//因此把最后可以使用的地址用于存储故障事件
 
 #define MAXCURSE    	10
 #define CMDMAXLEN 		100			//指令最大长度
@@ -38,6 +42,7 @@
 #define ZoomPageUpFlag (1<<7)
 #define ZoomPageDownFlag (1<<8)
 #define FaultPageChangeFlag (1<<9)
+#define EventPageClearFlag (1<<10)
 
 typedef enum
 {	
@@ -100,8 +105,7 @@ typedef struct
 {
 	u8 DwinEventNo;					//第几次发生故障
 	s_DwinEventTime s_EventTime;	//故障时间
-	u8 ucFaultType; 				//故障类型
-	u8 Dwin_FaultData[8][DWIN_BUFFER_LEN];
+	u8 ucFaultType; 				//故障类型	
 }s_DwinEventList;
 
 
@@ -119,7 +123,7 @@ extern u8 ucData[28];
 extern s_DwinCurseData s_CurseData;
 extern u8 ucZoomChange;
 extern u8 ucFaultRecordingNo;
-
+extern u8 *Dwin_FaultData[8]; //故障数据保存
 
 
 unsigned int DwinGet_CRC16(unsigned char* puchMsg,unsigned char usDataLen);
@@ -133,7 +137,7 @@ void Dwin_DrawCurse(u16 datasize,u8 *src,u8 len);
 //void SetCurseData(u8 *src[8],CurseData *cursedata,u8 len);
 void Dwin_DrawLine(u16 addr,DWIN_COLOR color,signed char xs,signed char ys);
 void Dwin_DataSample(u8 *src,u8 *des);
-void Dwin_EventDeal(void);
-
+void Dwin_DataManager(void);
+void Dwin_FultEventDisplay(void);
 #endif
 
