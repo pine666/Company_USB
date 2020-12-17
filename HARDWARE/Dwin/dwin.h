@@ -5,6 +5,7 @@
 #include "usart.h"
 #include "rtc.h"
 #include "w25qxx.h"
+#include "24cxx.h"
 #include "string.h"
 #include "ff.h"
 #include "malloc.h"
@@ -15,7 +16,8 @@
 //用于Dwin屏的数据分析，crc校验操作
 
 #define Dwin_memcpy memcpy
-#define DWININFOADDR 	31756*1024  			//spiflash有25M用于FAFTS的内存管理，
+/*(32-25)*1024=7168-6156=1012-----我们只需要240就行因此分配最后的512更为合理，且以4096作偏移*/
+#define DWININFOADDR 	32256*1024  			//spiflash有25M用于FAFTS的内存管理，
 												//虽然这部分可以直接使用，但是其需要一个文件类型
 												//而故障事件的基本信息只是结构体，数据小，并不需要文件管理
 												//因此把最后可以使用的地址用于存储故障事件
@@ -43,6 +45,8 @@
 #define ZoomPageDownFlag (1<<8)
 #define FaultPageChangeFlag (1<<9)
 #define EventPageClearFlag (1<<10)
+#define FaultPageUpFlag (1<<11)
+#define FaultPageDownFlag (1<<12)
 
 typedef enum
 {	
@@ -130,14 +134,15 @@ unsigned int DwinGet_CRC16(unsigned char* puchMsg,unsigned char usDataLen);
 void Dwin_CmdCreate(u16 addr,u8 *data,DWIN_RW_FLAG RWflag,u16 datanum);
 u8 Dwin_RxDeal(void);
 void Dwin_Page_Change(u8 page);
+void Dwin_CheckPage(void);
 void Dwin_DISPLAY(void);
-void Dwin_Curve(s_DwinCurseData cursedata,u8 datanum);
+void Dwin_Curse(s_DwinCurseData cursedata,u8 datanum);
 void ClearCurse(void);
 void Dwin_DrawCurse(u16 datasize,u8 *src,u8 len);
 //void SetCurseData(u8 *src[8],CurseData *cursedata,u8 len);
 void Dwin_DrawLine(u16 addr,DWIN_COLOR color,signed char xs,signed char ys);
 void Dwin_DataSample(u8 *src,u8 *des);
 void Dwin_DataManager(void);
-void Dwin_FultEventDisplay(void);
+void Dwin_FaultEventDisplay(void);
 #endif
 

@@ -21,9 +21,9 @@ SemaphoreHandle_t  RS485_BinarySemaphore;	//二值信号量句柄,用于接收成功标志
 //接收缓存区 	
 u8 RS485_RX_BUF[64];  	//接收缓冲,最大64个字节.
 u8 RS485_RX_CNT=0;  	//接收到的数据长度
-//Data Acquisition(DAQ)采集信号
-//采集数据接收、个数
-//u8 ucRS485_Buf[DAQ_RX_SIZE];		//用于复制接收，外部处理接收数据
+// Data Acquisition(DAQ)采集信号
+// 采集数据接收、个数
+u8 ucRS485_Buf[DAQ_RX_SIZE];		//用于复制接收，外部处理接收数据
 u8 ucDAQ_RX_Cnt; 					//计采集接收到的数据
 
 
@@ -35,26 +35,26 @@ void USART2_IRQHandler(void)
 	HAL_UART_IRQHandler(&USART_RS485Handler);
 	if(__HAL_UART_GET_FLAG(&USART_RS485Handler,UART_FLAG_IDLE)!=RESET)
 	{
-//		__HAL_UART_CLEAR_IDLEFLAG(&USART_RS485Handler);  //清除标志位
-//		SCB_DisableDCache(); //对于带Cache需要在读取DMA前先关闭
-//		HAL_UART_DMAStop(&USART_RS485Handler); 		    //先停止DMA，暂停接收    
-//		temp  =  __HAL_DMA_GET_COUNTER(&RS485RxDMA_Handler);// 获取DMA未传输个数                     
-//		RS485_RX_CNT =  RS485_BUFFERSIZE - temp; //总数减去未传输个数，得到已接收数据的个数
-//		if(RS485_RX_CNT>3)//收到迪文屏返回的数据都是11位（暂时发现）
-//		{			
-//			if(RS485_BinarySemaphore!=NULL)
-//			{
-//				//释放二值信号量
-//				xSemaphoreGiveFromISR(RS485_BinarySemaphore,&xHigherPriorityTaskWoken);	//释放二值信号量
-//				portYIELD_FROM_ISR(xHigherPriorityTaskWoken);//如果需要的话进行一次任务切换
-//			}
-//			RS485_memcpy(ucRS485_Buf,RS485_RX_BUF,RS485_RX_CNT);
-//			ucDAQ_RX_Cnt=RS485_RX_CNT;
-//			RS485_RX_CNT=0;
-//		}
-//		SCB_EnableDCache();//重新打开D-cache
-//		RS485_TX_Set(0);			//设置为接收模式			
-//		HAL_UART_Receive_DMA(&USART_RS485Handler,RS485_RX_BUF,RS485_BUFFERSIZE);//重新打开DMA接收 		
+		__HAL_UART_CLEAR_IDLEFLAG(&USART_RS485Handler);  //清除标志位
+		SCB_DisableDCache(); //对于带Cache需要在读取DMA前先关闭
+		HAL_UART_DMAStop(&USART_RS485Handler); 		    //先停止DMA，暂停接收    
+		temp  =  __HAL_DMA_GET_COUNTER(&RS485RxDMA_Handler);// 获取DMA未传输个数                     
+		RS485_RX_CNT =  RS485_BUFFERSIZE - temp; //总数减去未传输个数，得到已接收数据的个数
+		if(RS485_RX_CNT>3)//收到迪文屏返回的数据都是11位（暂时发现）
+		{			
+			if(RS485_BinarySemaphore!=NULL)
+			{
+				//释放二值信号量
+				xSemaphoreGiveFromISR(RS485_BinarySemaphore,&xHigherPriorityTaskWoken);	//释放二值信号量
+				portYIELD_FROM_ISR(xHigherPriorityTaskWoken);//如果需要的话进行一次任务切换
+			}
+			RS485_memcpy(ucRS485_Buf,RS485_RX_BUF,RS485_RX_CNT);
+			ucDAQ_RX_Cnt=RS485_RX_CNT;
+			RS485_RX_CNT=0;
+		}
+		SCB_EnableDCache();//重新打开D-cache
+		RS485_TX_Set(0);			//设置为接收模式			
+		HAL_UART_Receive_DMA(&USART_RS485Handler,RS485_RX_BUF,RS485_BUFFERSIZE);//重新打开DMA接收 		
 	}
 }    
 void DMA1_Stream4_IRQHandler(void)

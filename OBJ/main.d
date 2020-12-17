@@ -81,6 +81,7 @@
 ..\obj\main.o: ..\HARDWARE\Dwin\dwin.h
 ..\obj\main.o: ..\HARDWARE\RTC\rtc.h
 ..\obj\main.o: ..\HARDWARE\W25QXX\w25qxx.h
+..\obj\main.o: ..\HARDWARE\24CXX\24cxx.h
 ..\obj\main.o: ..\FATFS\source\ff.h
 ..\obj\main.o: ..\FATFS\source\integer.h
 ..\obj\main.o: ..\FATFS\source\ffconf.h

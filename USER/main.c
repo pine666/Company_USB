@@ -259,7 +259,6 @@ void changepage_task(void *pvParameters)
 	u8 i,j;
 	while(1)
 	{	
-
 		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志				
 		if(EventValue&ChangePageFlag)
 		{ 					
@@ -287,7 +286,7 @@ void changepage_task(void *pvParameters)
 						ucData[j]=0x00;					
 					Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
 					RS232_Send_Data(ucDwin_Cmd,8+7);	
-					usAddress=usAddress+4;
+					usAddress=usAddress+10;
 				}
 			}
 		}
@@ -310,17 +309,16 @@ void changepage_task(void *pvParameters)
 void pagedataProcess_task(void *pvParameters)
 {
 	u8 flag=1,random;
-	u16 i,j,k,inc;
+	u16 i,k,inc;
 	// u8 size;
 	u8 *BigBuf;
 	u8 *Usart1Buf;
 	u8 *NotepadBuf;
-	BaseType_t err=pdFALSE;
+	// BaseType_t err=pdFALSE;
 	EventBits_t EventValue;
 	// u16 usart1cnt;
 	while (1)
     {
-		
 		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志
 		//欢迎界面
 		if(ucPageNo==0)			//若进入页面数据加载时，页面还是为0（欢迎界面），则换页为1
@@ -351,7 +349,7 @@ void pagedataProcess_task(void *pvParameters)
 		else if(ucPageNo==3)
 		{
 
-			Dwin_FultEventDisplay();
+			Dwin_FaultEventDisplay();
 		}
 		else if(ucPageNo==5)
 		{
@@ -422,7 +420,7 @@ void pagedataProcess_task(void *pvParameters)
 				}
 			}
 			MYFREE(SRAMIN,BigBuf);				
-		}		
+		}	
     }
 }
 
@@ -446,7 +444,7 @@ void debugProcess_task(void *pvParameters)
 //串口1收发任务
 void usart1Process_task(void *pvParameters)
 {
-	BaseType_t err=pdFALSE;
+	// BaseType_t err=pdFALSE;
 	while(1)
 	{
 //		if(DEBUG_BinarySemaphore!=NULL)

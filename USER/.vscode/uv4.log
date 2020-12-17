@@ -49,11 +49,11 @@ ROMTableAddr = 0xE00FE000
 Target info:
 ------------
 Device: STM32H743IITx
-VTarget = 3.324V
+VTarget = 3.325V
 State of Pins: TCK: 1, TDI: 0, TDO: 1, TMS: 0, TRES: 1, TRST: 1
 Hardware-Breakpoints: 8
 Software-Breakpoints: 8192
 Watchpoints:          4
 JTAG speed: 5000 kHz
 
-Erase Done.Programming Done.Verify OK.Flash Load finished at 17:03:00
+Erase Done.Programming Done.Verify OK.Flash Load finished at 16:17:27

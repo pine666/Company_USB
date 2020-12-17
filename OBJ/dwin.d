@@ -74,6 +74,8 @@
 ..\obj\dwin.o: ..\SYSTEM\usart\usart.h
 ..\obj\dwin.o: ..\HARDWARE\RTC\rtc.h
 ..\obj\dwin.o: ..\HARDWARE\W25QXX\w25qxx.h
+..\obj\dwin.o: ..\HARDWARE\24CXX\24cxx.h
+..\obj\dwin.o: ..\HARDWARE\IIC\myiic.h
 ..\obj\dwin.o: ..\FATFS\source\ff.h
 ..\obj\dwin.o: ..\FATFS\source\integer.h
 ..\obj\dwin.o: ..\FATFS\source\ffconf.h

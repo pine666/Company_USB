@@ -673,6 +673,11 @@
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\RS485\rs485.c</FilePath>
             </File>
+            <File>
+              <FileName>24cxx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\24CXX\24cxx.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

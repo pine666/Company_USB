@@ -50,6 +50,7 @@
 "..\obj\rs232.o"
 "..\obj\rng.o"
 "..\obj\rs485.o"
+"..\obj\24cxx.o"
 "..\obj\malloc.o"
 "..\obj\exfuns.o"
 "..\obj\diskio.o"

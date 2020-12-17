@@ -26,6 +26,22 @@
 #define AT24C256	32767  
 //STM32 F746开发板使用的是24c02，所以定义EE_TYPE为AT24C02
 #define EE_TYPE AT24C02
+
+
+
+//将要存储设置信息的地址（24C02只有256字节的内存，对于地址0~256）
+#define AT_EVENTCOUNT 0
+#define AT_CTRATIO    1
+#define AT_PTRATIO    2
+#define AT_CTPERCENT  3
+#define AT_PTPERCENT  4
+#define AT_485ADDRESS 5
+#define AT_IPADDRESS  6
+#define AT_DWINTIME   10
+#define AT_OTHER      16
+
+
+
 					  
 u8 AT24CXX_ReadOneByte(u16 ReadAddr);							//指定地址读取一个字节
 void AT24CXX_WriteOneByte(u16 WriteAddr,u8 DataToWrite);		//指定地址写入一个字节
