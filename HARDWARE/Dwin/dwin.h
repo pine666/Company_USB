@@ -47,7 +47,7 @@
 #define EventPageClearFlag (1<<10)
 #define FaultPageUpFlag (1<<11)
 #define FaultPageDownFlag (1<<12)
-
+#define StopDrawCurseFlag (1<<13)		//停止画曲线，直接从循环中跳出，用于页面跳转和放大缩小时
 typedef enum
 {	
 	DWIN_WRITE = 0x82,
@@ -142,7 +142,11 @@ void Dwin_DrawCurse(u16 datasize,u8 *src,u8 len);
 //void SetCurseData(u8 *src[8],CurseData *cursedata,u8 len);
 void Dwin_DrawLine(u16 addr,DWIN_COLOR color,signed char xs,signed char ys);
 void Dwin_DataSample(u8 *src,u8 *des);
+u8 Dwin_FlashDataRead(u8 *buf,u8 No);
+u8 Dwin_FlashDataSave(u8 *buf,u8 No,u32 offset);
 void Dwin_DataManager(void);
 void Dwin_FaultEventDisplay(void);
+void Dwin_Pag5_Display(void);
+void Dwin_Pag6_Display(void);
 #endif
 

@@ -250,8 +250,8 @@ void start_task(void *pvParameters)
     taskEXIT_CRITICAL();            //退出临界区
 }
 
-//换页函数
-//换页如何保证他会立即执行，且过程只能够
+//换页过程不能让其中有任何任务切换（即使此任务不会进入阻塞态）
+//尝试先清屏
 void changepage_task(void *pvParameters)
 {
 	BaseType_t err=pdFALSE;
@@ -259,37 +259,6 @@ void changepage_task(void *pvParameters)
 	u8 i,j;
 	while(1)
 	{	
-		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志				
-		if(EventValue&ChangePageFlag)
-		{ 					
-			usAddress=0x0084;
-			ucData[0]=0x5A;
-			ucData[1]=0x01;
-			ucData[2]=0x00;
-			ucData[3]=ucPageNo;
-			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,4);
-			RS232_Send_Data(ucDwin_Cmd,8+4); 
-			xEventGroupClearBits(Dwin_EventGroupHandler,ChangePageFlag);	
-			if(EventValue&ClearScreenFlag)
-			{
-				vTaskDelay(40);
-				ClearCurse();
-				xEventGroupClearBits(Dwin_EventGroupHandler,ClearScreenFlag);					
-			}
-			if(EventValue&EventPageClearFlag)
-			{
-				//先把屏幕的时间和文本清为初始值
-				usAddress=0x5020;
-				for(i=0;i<10;i++)
-				{		
-					for(j=0;j<7;j++)
-						ucData[j]=0x00;					
-					Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
-					RS232_Send_Data(ucDwin_Cmd,8+7);	
-					usAddress=usAddress+10;
-				}
-			}
-		}
 		if(RS232_BinarySemaphore!=NULL)
 		{
 
@@ -300,6 +269,38 @@ void changepage_task(void *pvParameters)
 				ucDwin_RX_Cnt=0;//串口接收缓冲区清零	
 			}						
 		}
+		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志				
+		if(EventValue&ChangePageFlag)
+		{ 	
+			xEventGroupSetBits(Dwin_EventGroupHandler,StopDrawCurseFlag);					
+			if(EventValue&ClearScreenFlag)
+			{
+				ClearCurse();
+				xEventGroupClearBits(Dwin_EventGroupHandler,ClearScreenFlag);					
+			}				
+			usAddress=0x0084;
+			ucData[0]=0x5A;
+			ucData[1]=0x01;
+			ucData[2]=0x00;
+			ucData[3]=ucPageNo;
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,4);
+			RS232_Send_Data(ucDwin_Cmd,8+4); 
+			xEventGroupClearBits(Dwin_EventGroupHandler,ChangePageFlag);	
+			
+			if(EventValue&EventPageClearFlag)
+			{
+				//先把屏幕的时间和文本清为初始值
+				usAddress=0x5020;
+				for(i=0;i<10;i++)
+				{		
+					for(j=0;j<7;j++)
+						ucData[j]=0x00;					
+					Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
+					RS232_Send_Data(ucDwin_Cmd,8+7);	
+					usAddress=usAddress+0x0010;
+				}
+			}
+		}
 		Dwin_DataManager();	
 		vTaskDelay(200);		
 	}
@@ -309,10 +310,8 @@ void changepage_task(void *pvParameters)
 void pagedataProcess_task(void *pvParameters)
 {
 	u8 flag=1,random;
-	u16 i,k,inc;
+	u16 i;
 	// u8 size;
-	u8 *BigBuf;
-	u8 *Usart1Buf;
 	u8 *NotepadBuf;
 	// BaseType_t err=pdFALSE;
 	EventBits_t EventValue;
@@ -353,25 +352,12 @@ void pagedataProcess_task(void *pvParameters)
 		}
 		else if(ucPageNo==5)
 		{
+			if(EventValue&StopDrawCurseFlag)
+				xEventGroupClearBits(Dwin_EventGroupHandler,StopDrawCurseFlag);				
 			if((EventValue&FaultPageChangeFlag)||(EventValue&QUITFLAG))
 			{
-				k=0;
-//				usart1cnt=ucDebug_RX_CNT;					
-				ucDebug_RX_CNT=0;//串口接收缓冲区清零
-				Usart1Buf=mymalloc(SRAMIN,800*sizeof(u8));
-				if(Usart1Buf!=NULL)
-				{
-//						mymemcpy(Usart1Buf,ucDebug_RX_BUF,usart1cnt);
-					for(i=0;i<800;i++)
-					{
-						Usart1Buf[i]=ucDebug_RX_BUF[k];
-						if(i%2)k=k+7;
-						else k=k+8;
-					}
-					Dwin_DrawCurse(800,Usart1Buf,10);
-					xEventGroupClearBits(Dwin_EventGroupHandler,QUITFLAG|FaultPageChangeFlag);	
-					MYFREE(SRAMIN,Usart1Buf);
-				}
+				Dwin_Pag5_Display();
+				xEventGroupClearBits(Dwin_EventGroupHandler,QUITFLAG|FaultPageChangeFlag);	
 			}
 			if(EventValue&ToDownloadFlag)
 			{
@@ -395,31 +381,14 @@ void pagedataProcess_task(void *pvParameters)
 		}
 		else if(ucPageNo==6)
 		{
-			BigBuf=mymalloc(SRAMIN,1200*sizeof(u8));
-			if(BigBuf!=NULL)
+			if(EventValue&StopDrawCurseFlag)
+				xEventGroupClearBits(Dwin_EventGroupHandler,StopDrawCurseFlag);						
+			if(EventValue&ZoomInFlag)
 			{
-				k=0;
-				for(i=0;i<1200;i++)
-				{
-					if(ucZoomInNo==0)break;
-					switch(ucZoomInNo)
-					{
-						case 1:	inc=0;break;
-						case 2:	inc=1200;break;
-						case 3:	inc=2400;break;
-						case 4:	inc=3600;break;
-						case 5:	inc=4800;break;
-						default:break;
-					}
-					BigBuf[i]=ucDebug_RX_BUF[inc+(k++)];
-				}
-				if(ucZoomInNo!=0)
-				{
-					Dwin_DrawCurse(1200,BigBuf,10);
-					ucZoomInNo=0;
-				}
+				Dwin_Pag6_Display();
+				xEventGroupClearBits(Dwin_EventGroupHandler,ZoomInFlag);	
 			}
-			MYFREE(SRAMIN,BigBuf);				
+
 		}	
     }
 }
