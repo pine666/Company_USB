@@ -70,3 +70,4 @@
 ..\obj\rs232.o: ..\FreeRTOS\include\queue.h
 ..\obj\rs232.o: ..\FreeRTOS\include\task.h
 ..\obj\rs232.o: ..\FreeRTOS\include\list.h
+..\obj\rs232.o: ..\HARDWARE\LED\led.h

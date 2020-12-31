@@ -30,8 +30,9 @@
 #define NOTEPAD_EDIT_LEN	7168	
 extern USBH_HandleTypeDef hUSBHost;
 void USB_USER_Init(void);
-u8 noteWrite(u8 *buf,u16 len);
-
+u8 noteWrite(void *buf,u16 len);
+u8  Ascii2Hex(u8 *hex);
+u16 Hex2Ascii(u8 hex);
 #endif
 
 

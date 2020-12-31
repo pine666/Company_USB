@@ -1,4 +1,5 @@
 #include "rs232.h"
+#include "led.h"
 //////////////////////////////////////////////////////////////////////////////////	 
 //迪文屏通信和数据解析
 //1、RS-232通信设置
@@ -33,6 +34,7 @@ void USART3_IRQHandler(void)
 	HAL_UART_IRQHandler(&USART_RS232Handler);
 	if(__HAL_UART_GET_FLAG(&USART_RS232Handler,UART_FLAG_IDLE)!=RESET)
 	{
+		LED0_Toggle;
 		__HAL_UART_CLEAR_IDLEFLAG(&USART_RS232Handler);  //清除标志位
 		SCB_DisableDCache(); //对于带Cache需要在读取DMA前先关闭
 		HAL_UART_DMAStop(&USART_RS232Handler); 		    //先停止DMA，暂停接收    
@@ -170,7 +172,7 @@ void RS232_Send_Data(u8 *buf,u16 len)
 {
 	u32 time=0;
 	u32 maxDelay=0x4FFFF;
-	while(HAL_UART_Transmit_DMA(&USART_RS232Handler, buf,len)!= HAL_OK);
+	while(HAL_UART_Transmit_DMA(&USART_RS232Handler, buf,len)!= HAL_OK);		//若长时间在此循环，则会进行复位
 	while(__HAL_UART_GET_FLAG(&USART_RS232Handler,UART_FLAG_TC)==RESET)
 	{
 		time++;

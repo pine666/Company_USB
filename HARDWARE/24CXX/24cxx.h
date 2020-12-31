@@ -39,7 +39,7 @@
 #define AT_IPADDRESS  6
 #define AT_DWINTIME   10
 #define AT_OTHER      16
-
+#define AT_EVENTNO    30   // 记录最新事件的序号
 
 
 					  

@@ -85,20 +85,20 @@ TaskHandle_t Usart1Process_Handler;
 //任务函数
 void usart1Process_task(void *pvParameters);
 
+/************看门狗任务***************/
+
+/************页面查看任务***************/
+
 //二值信号量句柄
 EventGroupHandle_t Dwin_EventGroupHandler;	//事件标志组句柄
-
 /***********所有需要设定的全局变量和宏定义，会放在一个头文件中*****************/
 
-//u8 TEXT[100]={"YOU ARE RIGHT YOU KNOW!\r\n"}; 
 #define PI 3.1415926
 #define POINT_NUM 60
 u8 SinBuf[60]={0};
 u8 *sinbuf=NULL;
 u8 *buf=NULL;
 extern s_DwinCurseData s_CurseData;
-char const cnstr[9]={"这部分用"};
-
 
 /****************/
 //使用sine函数计算sine值，构建数组
@@ -194,7 +194,10 @@ int main(void)
 	exfuns_init();				            //为fatfs相关变量申请内存  
  	f_mount(fs[1],"1:",1); 		            //挂载SPI FLASH. 
 	USB_USER_Init();
-	ucPageNo=1;
+
+	//系统初始化，把一些全局变量初始化（原则上，全局变量只在一个地方可以更改，其他位置仅适用（防止内存管理问题））
+	ucPageType=1;
+	ucAcquireNo=1;
     //创建开始任务
 	xTaskCreate((TaskFunction_t )start_task,            //任务函数
 				(const char*    )"start_task",          //任务名称
@@ -203,7 +206,7 @@ int main(void)
                 (UBaseType_t    )START_TASK_PRIO,       //任务优先级
                 (TaskHandle_t*  )&StartTask_Handler);   //任务句柄              
     vTaskStartScheduler();          //开启任务调度
-}
+}  
 
 //开始任务任务函数
 void start_task(void *pvParameters)
@@ -216,7 +219,7 @@ void start_task(void *pvParameters)
 	DEBUG_BinarySemaphore=xSemaphoreCreateBinary();
 	//创建事件标志组
 	Dwin_EventGroupHandler=xEventGroupCreate();	
-	xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag|ClearScreenFlag);//开始时页面切换
+	xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag);//开始时页面切换
     //创建换页任务
     xTaskCreate((TaskFunction_t )changepage_task,             
                 (const char*    )"changepage_task",           
@@ -250,34 +253,77 @@ void start_task(void *pvParameters)
     taskEXIT_CRITICAL();            //退出临界区
 }
 
-//换页过程不能让其中有任何任务切换（即使此任务不会进入阻塞态）
+//换页过程不能让其中有任何任务切换（即：使此任务不会进入阻塞态）
 //尝试先清屏
 void changepage_task(void *pvParameters)
 {
 	BaseType_t err=pdFALSE;
 	EventBits_t EventValue;	
+	u8 tempValue;
 	u8 i,j;
 	while(1)
 	{	
 		if(RS232_BinarySemaphore!=NULL)
 		{
-
+			
 			err=xSemaphoreTake(RS232_BinarySemaphore,0);	//获取信号量
 			if(err==pdTRUE)										//获取信号量成功
-			{			
-				Dwin_RxDeal();
+			{	
+				Dwin_RxDeal();				
 				ucDwin_RX_Cnt=0;//串口接收缓冲区清零	
 			}						
 		}
-		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志				
+		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志
+		/***************菜单切换******************/		
 		if(EventValue&ChangePageFlag)
-		{ 	
-			xEventGroupSetBits(Dwin_EventGroupHandler,StopDrawCurseFlag);					
-			if(EventValue&ClearScreenFlag)
+		{ 
+			ucPageNo=Dwin_CaculatePage();	//通过菜单去换页的情况
+			ClearCurse();							//换页必清屏
+			if(ucPageType==1||ucPageType==2||ucPageType==4)
 			{
-				ClearCurse();
-				xEventGroupClearBits(Dwin_EventGroupHandler,ClearScreenFlag);					
-			}				
+				//先给采集板标数
+				usAddress=0x5040;
+				for(i=0;i<5;i++)
+				{				
+					ucData[0]=0x00;
+					ucData[1]=5*ucAcquirePage+(i+1);
+					Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,2);
+					RS232_Send_Data(ucDwin_Cmd,8+2);
+					usAddress+=1;
+				}
+				if(ucPageType==1)
+				{
+					if(EventValue&CurseIsDrawingFlag)						
+						xEventGroupSetBits(Dwin_EventGroupHandler,StopDrawCurseFlag);//需要放大页面且发生页面切换	
+				}	
+				if(ucPageType==4)
+				{	
+					//获得当前最新的页码数
+					tempValue=AT24CXX_ReadOneByte(AT_EVENTNO);
+					if(ucEventNo!=tempValue)ucEventNo=tempValue;
+					ucEventNoDiv=ucEventNo/10;
+					ucEventNoRem=ucEventNo%10;
+
+					if(EventValue&CurseIsDrawingFlag)						
+						xEventGroupSetBits(Dwin_EventGroupHandler,StopDrawCurseFlag);//需要放大页面且发生页面切换	
+					if(EventValue&FaultPageRefreshFlag)
+					{
+						ucFaultPageNo=ucEventNoDiv+1;
+						xEventGroupClearBits(Dwin_EventGroupHandler,FaultPageRefreshFlag);
+					}
+					else if(EventValue&ReturnBackEventPageFlag)
+					{	
+						ucFaultPageNo=ucFaultPageNo;
+						xEventGroupClearBits(Dwin_EventGroupHandler,ReturnBackEventPageFlag);
+					}
+					//先把屏幕的时间和文本清为初始值				
+
+					//再把事件标志（图标）给复位
+					//
+				}	
+			}
+			
+			//换页			
 			usAddress=0x0084;
 			ucData[0]=0x5A;
 			ucData[1]=0x01;
@@ -285,21 +331,24 @@ void changepage_task(void *pvParameters)
 			ucData[3]=ucPageNo;
 			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,4);
 			RS232_Send_Data(ucDwin_Cmd,8+4); 
-			xEventGroupClearBits(Dwin_EventGroupHandler,ChangePageFlag);	
-			
-			if(EventValue&EventPageClearFlag)
-			{
-				//先把屏幕的时间和文本清为初始值
-				usAddress=0x5020;
-				for(i=0;i<10;i++)
-				{		
-					for(j=0;j<7;j++)
-						ucData[j]=0x00;					
-					Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,7);
-					RS232_Send_Data(ucDwin_Cmd,8+7);	
-					usAddress=usAddress+0x0010;
-				}
-			}
+			xEventGroupClearBits(Dwin_EventGroupHandler,ChangePageFlag);
+		}
+
+		/*****************进入波形页面**************/
+		if(EventValue&EnterCursePageFlag)
+		{
+
+			ucPageType=0;
+			ClearCurse();
+			//换页			
+			usAddress=0x0084;
+			ucData[0]=0x5A;
+			ucData[1]=0x01;
+			ucData[2]=0x00;
+			ucData[3]=ucPageNo;
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,4);
+			RS232_Send_Data(ucDwin_Cmd,8+4); 
+			xEventGroupClearBits(Dwin_EventGroupHandler,EnterCursePageFlag);
 		}
 		Dwin_DataManager();	
 		vTaskDelay(200);		
@@ -310,7 +359,8 @@ void changepage_task(void *pvParameters)
 void pagedataProcess_task(void *pvParameters)
 {
 	u8 flag=1,random;
-	u16 i;
+	u16 i,j;
+	u16 *usTransBuf;
 	// u8 size;
 	u8 *NotepadBuf;
 	// BaseType_t err=pdFALSE;
@@ -319,16 +369,13 @@ void pagedataProcess_task(void *pvParameters)
 	while (1)
     {
 		EventValue=xEventGroupGetBits(Dwin_EventGroupHandler);	//获取事件组的标志
-		//欢迎界面
-		if(ucPageNo==0)			//若进入页面数据加载时，页面还是为0（欢迎界面），则换页为1
-		{
-			ucPageNo=1;
-			xEventGroupSetBits(Dwin_EventGroupHandler,ChangePageFlag);
-		}
-		//首页
-		else if(ucPageNo==1)
-		{			
-			usAddress=0x5001;
+		/***************菜单页****************/
+		//实时监测
+		if(ucPageType==1)
+		{	
+			if(EventValue&StopDrawCurseFlag)		//跳出概略图曲线显示循环后需要清标志位
+				xEventGroupClearBits(Dwin_EventGroupHandler,StopDrawCurseFlag);	
+			usAddress=0x5010;
 			for(i=0;i<20;i++)
 			{
 				random=(u8)RNG_Get_RandomRange(0,100);//获取[0,100]区间的随机数
@@ -341,55 +388,156 @@ void pagedataProcess_task(void *pvParameters)
 			RS232_Send_Data(ucDwin_Cmd,8+20); 
 			CreateSineVal(flag++);
 			sinbuf=SinBuf;
-			Dwin_DrawCurse(60,sinbuf,10);
+			Dwin_DrawRealTimeCurse(60,sinbuf);
 			if(flag>10)flag=1;
 		}
-		//事件记录页，点进去会跳转到Page5
-		else if(ucPageNo==3)
+		//实时数据,32个数据，分为7/7/9/9去传输（测试发现，每次传输的变量数超过14，可能10都会有，就会有数值无法显示）
+		else if(ucPageType==2)
 		{
-
-			Dwin_FaultEventDisplay();
-		}
-		else if(ucPageNo==5)
-		{
-			if(EventValue&StopDrawCurseFlag)
-				xEventGroupClearBits(Dwin_EventGroupHandler,StopDrawCurseFlag);				
-			if((EventValue&FaultPageChangeFlag)||(EventValue&QUITFLAG))
+			usAddress=0x5050;
+			for(i=0;i<14;i++)
 			{
-				Dwin_Pag5_Display();
-				xEventGroupClearBits(Dwin_EventGroupHandler,QUITFLAG|FaultPageChangeFlag);	
+				random=(u8)RNG_Get_RandomRange(0,100);//获取[0,100]区间的随机数	
+				if(i%2)
+					ucData[i]=random;
+				else
+					ucData[i]=0x00;
 			}
-			if(EventValue&ToDownloadFlag)
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,14);
+			RS232_Send_Data(ucDwin_Cmd,8+14);
+			usAddress=0x5057;
+			for(i=0;i<14;i++)
 			{
-				NotepadBuf=mymalloc(SRAMIN,6000*sizeof(u8));
-				if(NotepadBuf!=NULL)
+				random=(u8)RNG_Get_RandomRange(0,100);//获取[0,100]区间的随机数	
+				if(i%2)
+					ucData[i]=random;
+				else
+					ucData[i]=0x00;
+			}
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,14);
+			RS232_Send_Data(ucDwin_Cmd,8+14); 
+			usAddress=0x505E;
+			for(i=0;i<18;i++)
+			{
+				random=(u8)RNG_Get_RandomRange(0,100);//获取[0,100]区间的随机数	
+				if(i&0x0001)
+					ucData[i]=random;
+				else
+					ucData[i]=0x00;
+			}
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,18);
+			RS232_Send_Data(ucDwin_Cmd,8+18);
+			usAddress=0x5067;
+			for(i=0;i<18;i++)
+			{
+				random=(u8)RNG_Get_RandomRange(0,100);//获取[0,100]区间的随机数	
+				if(i%2)
+					ucData[i]=random;
+				else
+					ucData[i]=0x00;
+			}
+			Dwin_CmdCreate(usAddress,ucData,DWIN_WRITE,18);
+			RS232_Send_Data(ucDwin_Cmd,8+18);
+			vTaskDelay(400);
+		}
+		//系统设置
+		else if(ucPageType==3)
+		{
+			//存储设置信息到24C64中
+		}
+		//事件记录页，点进去会跳转到Page18、事件ucEventNo在0~59，其页数6，为除数+1
+		//事件记录有2种显示状态，一种是点事件记录图标，显示最新一页数据，另一种是选择一页进行概略图查看后返回后，到之前显示的页面
+		else if(ucPageType==4)
+		{	
+			
+			if(EventValue&StopDrawCurseFlag)		//跳出概略图曲线显示循环后需要清标志位
+				xEventGroupClearBits(Dwin_EventGroupHandler,StopDrawCurseFlag);	
+	
+			if(EventValue&FaultPageUpFlag)
+			{
+				ucFaultPageNo-=1;
+				xEventGroupClearBits(Dwin_EventGroupHandler,FaultPageUpFlag);
+			}
+			else if(EventValue&FaultPageDownFlag)
+			{
+				ucFaultPageNo+=1;
+				xEventGroupClearBits(Dwin_EventGroupHandler,FaultPageDownFlag);
+			}
+			if(ucFaultPageNo>6)ucFaultPageNo=1;
+			else if(ucFaultPageNo<1)ucFaultPageNo=6;			//限制范围
+
+			Dwin_FaultEventDisplay(); 							//默认先显示最新的事件	
+
+			vTaskDelay(500);			
+							
+		}
+		/*************非菜单页***************/
+		//波形概略图
+		else if(ucPageType==0)	
+		{
+			if(ucPageNo==18)
+			{
+				if((EventValue&FaultPageChangeFlag)||(EventValue&QuitFlag))
 				{
-					mymemset(NotepadBuf,0x64,6000);
-					if(noteWrite(NotepadBuf,6000)==0)
-					{
-						LED1_Toggle;
-						//这里需要一个屏幕提醒下载成功
-					}
+					Dwin_Page5_Display();
+					xEventGroupClearBits(Dwin_EventGroupHandler,QuitFlag|FaultPageChangeFlag);	
 				}
-				xEventGroupClearBits(Dwin_EventGroupHandler,ToDownloadFlag);	
-			}
-			if(EventValue&ToPrintFlag)
-			{
-				xEventGroupClearBits(Dwin_EventGroupHandler,ToPrintFlag);	
-			}
+				if(EventValue&ToDownloadFlag)
+				{
+					NotepadBuf=mymalloc(SRAMIN,6000*sizeof(u8));
+					usTransBuf=mymalloc(SRAMIN,12000*sizeof(u16));
+					if(NotepadBuf!=NULL)
+					{
+						Dwin_FlashDataRead(NotepadBuf,4);
+						j=0;
+						for(i=0;i<12000;i++)
+						{
+							if(i%2)
+								usTransBuf[i]='\0';
 
+							else
+								usTransBuf[i]=Hex2Ascii(NotepadBuf[i]);
+
+						}
+						if(noteWrite(usTransBuf,12000)==0)
+						{
+							LED1_Toggle;
+							//这里需要一个屏幕提醒下载成功
+						}
+					}
+					xEventGroupClearBits(Dwin_EventGroupHandler,ToDownloadFlag);	
+				}
+				if(EventValue&ToPrintFlag)
+				{
+					xEventGroupClearBits(Dwin_EventGroupHandler,ToPrintFlag);	
+				}
+
+			}
+			//波形具体图
+			else if(ucPageNo==19)
+			{					
+				if(EventValue&ZoomInFlag)
+				{ 	
+					xEventGroupClearBits(Dwin_EventGroupHandler,ZoomInFlag);
+					if(EventValue&StopDrawCurseFlag)
+						xEventGroupClearBits(Dwin_EventGroupHandler,StopDrawCurseFlag);
+					if(EventValue&ZoomPageUpFlag)
+					{
+						ucZoomInNo-=1;
+						xEventGroupClearBits(Dwin_EventGroupHandler,ZoomPageUpFlag);
+					}					
+					else if(EventValue&ZoomPageDownFlag)
+					{
+						ucZoomInNo+=1;
+						xEventGroupClearBits(Dwin_EventGroupHandler,ZoomPageDownFlag);
+					}
+					if(ucZoomInNo>5)ucZoomInNo=1;
+					else if(ucZoomInNo<1)ucZoomInNo=5;
+					Dwin_Page6_Display();	
+				}
+			}	
 		}
-		else if(ucPageNo==6)
-		{
-			if(EventValue&StopDrawCurseFlag)
-				xEventGroupClearBits(Dwin_EventGroupHandler,StopDrawCurseFlag);						
-			if(EventValue&ZoomInFlag)
-			{
-				Dwin_Pag6_Display();
-				xEventGroupClearBits(Dwin_EventGroupHandler,ZoomInFlag);	
-			}
-
-		}	
+		
     }
 }
 
@@ -426,7 +574,7 @@ void usart1Process_task(void *pvParameters)
 //			}						
 //		}
 		LED1_Toggle;	
-		vTaskDelay(10);  
+		vTaskDelay(1000);  
 	
 	
 	}

@@ -41,14 +41,14 @@ void USB_USER_Init(void)
 //返回：0，成功；1，失败
 extern RTC_TimeTypeDef RTC_TimeStruct;
 extern RTC_DateTypeDef RTC_DateStruct;
-u8 noteWrite(u8 *buf,u16 len)
+u8 noteWrite(void *buf,u16 len)
 {
 	FIL* f_txt=0;					//文件
 	u32 total,free;	
  	u8 *pname=0; 
 	u8 res;
 	u8 rval=0;						//标记个API返回值，为0时，API执行正常
-	u16 br;
+	u16 br,i;
 	
 	//先选择模式 
 	f_txt=(FIL *)mymalloc(SRAMIN,sizeof(FIL));	//开辟FIL字节的内存区域 
@@ -94,6 +94,7 @@ u8 noteWrite(u8 *buf,u16 len)
 			}
 		}
 		MYFREE(SRAMIN,pname);  
+
 	}
 	MYFREE(SRAMIN,f_txt);
 
@@ -103,9 +104,21 @@ u8 noteWrite(u8 *buf,u16 len)
 }
 
 
+u16 Hex2Ascii(u8 hex) 
+{
+    u8 hhex = (hex>>4) & 0x0F;
+    u8 lhex = hex & 0x0F;
+    if(hhex<=9)
+        hhex+=0x30;
+    else if ((hhex>=10)&&(hhex<=15))
+        hhex+=0x37;
+    if(lhex<=9)
+        lhex+=0x30;
+    else if ((lhex>=10)&&(lhex<=15))
+        lhex+=0x37;
+    
+    return (u16)(((hhex&0x00FF)<<8) | lhex);
 
-
-
-
+}
 
 
